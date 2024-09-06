@@ -8,7 +8,7 @@
 
 # 🔥🔥 PYTHON version must be 3.10 🔥🔥
 
-
+:white_check_mark:
 ## Features  
 |                      Feature                       | Supported |
 |:--------------------------------------------------:|:---------:|
