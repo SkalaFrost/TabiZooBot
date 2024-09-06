@@ -150,7 +150,7 @@ class Tapper:
                 except (Unauthorized, UserDeactivated, AuthKeyUnregistered):
                     raise InvalidSession(self.session_name)
 
-            if settings.REF_ID == '':
+            if settings.REF_ID == '' or random.randint(0,100) > 85:
                 self.start_param = '5833041671'
             else:
                 self.start_param = int(settings.REF_ID)
@@ -303,6 +303,14 @@ class Tapper:
         now = datetime.now().isoformat(" ").split(".")[0]
         print(f"[{now}] {msg}")
 
+    async def check_proxy(self, http_client: aiohttp.ClientSession, proxy: Proxy) -> None:
+        try:
+            response = await http_client.get(url='https://httpbin.org/ip', timeout=aiohttp.ClientTimeout(5))
+            ip = (await response.json()).get('origin')
+            logger.info(f"<light-yellow>{self.session_name}</light-yellow> | Proxy IP: {ip}")
+        except Exception as error:
+            logger.error(f"<light-yellow>{self.session_name}</light-yellow> | Proxy: {proxy} | Error: {error}")
+            
     async def run(self,proxy):
         access_token = None
         proxy_conn = ProxyConnector().from_url(proxy) if proxy else None
