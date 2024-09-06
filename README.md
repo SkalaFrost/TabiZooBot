@@ -12,7 +12,7 @@
 ## Features  
 |                      Feature                       | Supported |
 |:--------------------------------------------------:|:---------:|
-|                   Multithreading                   |     ✅     |
+|                   Multithreading                   |     :white_check_mark:     |
 |              Proxy binding to session              |     ✅     |
 | Auto-register your account with your referral link |     ✅     |
 |             Auto claim, upgrade           |     ✅     |
