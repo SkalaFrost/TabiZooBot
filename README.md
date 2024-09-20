@@ -13,10 +13,10 @@
 |                      Feature                       | Supported |
 |:--------------------------------------------------:|:---------:|
 |                   Multithreading                   |     :white_check_mark:     |
-|              Proxy binding to session              |     ✅     |
-| Auto-register your account with your referral link |     ✅     |
-|             Auto claim, upgrade           |     ✅     |
-|           Support for pyrogram .session            |     ✅     |
+|              Proxy binding to session              |     :white_check_mark:     |
+| Auto-register your account with your referral link |     :white_check_mark:     |
+|             Auto claim, upgrade           |     :white_check_mark:     |
+|           Support for pyrogram .session            |     :white_check_mark:     |
 
 
 |        Settings         |                                 Description                                  |
