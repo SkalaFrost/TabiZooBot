@@ -195,6 +195,59 @@ class Tapper:
             await asyncio.sleep(delay=3)
 
     @error_handler
+    async def do_task(self, proxy: str | None) -> str:
+        if self.proxy:
+            proxy = Proxy.from_str(self.proxy)
+            proxy_dict = dict(
+                scheme=proxy.protocol,
+                hostname=proxy.host,
+                port=proxy.port,
+                username=proxy.login,
+                password=proxy.password
+            )
+        else:
+            proxy_dict = None
+
+        self.tg_client.proxy = proxy_dict
+
+        try:
+            if not self.tg_client.is_connected:
+                try:
+                    await self.tg_client.connect()
+
+                except (Unauthorized, UserDeactivated, AuthKeyUnregistered):
+                    raise InvalidSession(self.session_name)
+            
+            while True:
+                try:
+                    peer = await self.tg_client.resolve_peer('WizzwoodsBot')
+                    break
+                except FloodWait as fl:
+                    fls = fl.value
+
+                    logger.warning(f"{self.session_name} | FloodWait {fl}")
+                    logger.info(f"{self.session_name} | Sleep {fls}s")
+                    await asyncio.sleep(fls + 3)
+            
+            ref_id = "rp_839869"
+            
+            web_view = await self.tg_client.invoke(RequestAppWebView(
+                peer=peer,
+                app=InputBotAppShortName(bot_id=peer, short_name="app"),
+                platform='android',
+                write_allowed=True,
+                start_param=ref_id
+            ))
+
+        except InvalidSession as error:
+            logger.error(f"{self.session_name} | Invalid session")
+            await asyncio.sleep(delay=3)
+
+        except Exception as error:
+            logger.error(f"{self.session_name} | Unknown error: {error}")
+            await asyncio.sleep(delay=3)
+
+    @error_handler
     async def sigin(self, session):
             url = f"https://api.tabibot.com/api/user/v1/sign-in"
             json_data = {"referral": 5833041671 if settings.REF_ID == '' else int(settings.REF_ID)}
@@ -238,8 +291,8 @@ class Tapper:
         async with session.post(url=url, json = {}, ssl=False) as response:
             return await response.json()
     @error_handler
-    async def boot(self, session):
-        url = f"https://api.tabibot.com/api/task/v1/boot"
+    async def task_list(self, session):
+        url = f"https://api.tabibot.com/api/task/v1/list"
 
         async with session.get(url=url,ssl= False) as response:
             res_json =  await response.json()
@@ -259,6 +312,31 @@ class Tapper:
         async with session.post(url=url,json = {},ssl= False) as response:
             res_json =  await response.json()
             return res_json.get("message") == "success"
+    
+    @error_handler
+    async def mine_project(self, session):
+
+        url = f"https://api.tabibot.com/api/task/v1/project/mine"
+        async with session.get(url=url, ssl= False) as response:
+            res_json =  await response.json()
+            if res_json.get("code") == 200:
+                return res_json.get("data",[])
+    
+    @error_handler
+    async def get_mine_project(self, session,project_tag):
+        params = {"project_tag":project_tag}
+        url = f"https://api.tabibot.com/api/task/v1/mine"
+        async with session.get(url=url, ssl= False, params=params) as response:
+            res_json =  await response.json()
+            if res_json.get("code") == 200:
+                return res_json.get("data",{}).get("list",[])
+    
+    @error_handler
+    async def do_project(self, session,task_tag):
+        url = f"https://api.tabibot.com/api/task/v1/report/go"
+        data = {"task_tag":task_tag}
+        async with session.post(url=url,json = data,ssl= False) as response:
+            return response.status == 200
         
     @error_handler
     async def join_and_mute_tg_channel(self, link: str):
@@ -327,23 +405,46 @@ class Tapper:
                         access_token_created_time = time()
                         session.headers["Rawdata"] = f"{data}"
                 if await self.sigin(session):
-                    tasks = await self.boot(session)
-                    for task in tasks:
-                        if task.get("user_task_status") == 2:
-                            if task.get('task_tag') == 'boot_join_tabi_channel':
-                                await self.join_and_mute_tg_channel(task.get('link_url'))
-                                await asyncio.sleep(5)
-                                await self.do_boot(session=session,task_tag = task.get('task_tag'))
-                            else:
-                                await self.do_boot(session=session,task_tag = task.get('task_tag'))
-                            await asyncio.sleep(random.randint(2,10))
-
                     user_info = await self.user_info(session)
                     if user_info:
                         user_id = user_info["tg_user_id"]
                         balance = user_info["coins"]
                         level = user_info["level"]
                         self.info(f"Account ID: <cyan>{user_id}</cyan> - Balance: <cyan>{balance:,}</cyan> - Level: <cyan>{level}</cyan>")
+
+                    tasks = await self.task_list(session)
+                    full_tasks = [task for task_list in tasks for task in task_list["task_list"]]
+
+                    for task in full_tasks:
+                        if task.get("user_task_status") == 2:
+                            if task.get('task_tag') in ['boot_join_tabi_channel','task_list_join_our_tg_group']:
+                                await self.join_and_mute_tg_channel(task.get('link_url'))
+                                continue
+                            elif task.get('task_tag') in ['task_list_watch_ads','task_list_post_story','task_list_invite_3_friends']:
+                                continue
+
+                            if await self.do_boot(session=session,task_tag = task.get('task_tag')):
+                                self.info(f"Do task <cyan>{task['task_name']}</cyan> sucessfully")
+                            else:
+                                self.warning(f"Failed to do task <cyan>{task['task_name']}</cyan>")
+                            await asyncio.sleep(random.randint(2,10))
+
+                    mine_projects = await self.mine_project(session)
+                    for project in mine_projects:
+                        list_project = await self.get_mine_project(session = session, project_tag = project["project_tag"])
+                        if list_project:
+                            for task in list_project:
+                                if task["user_task_status"] == 2:
+                                    if task["task_tag"] == 'mine_wizzwoods_join_bot':
+                                        await self.do_task(proxy=proxy)
+                                    elif "join_channel" in task["task_tag"]:
+                                        await self.join_and_mute_tg_channel(task["link_url"])
+                                    if await self.do_project(session = session, task_tag = task["task_tag"]):
+                                        if await self.do_boot(session=session,task_tag = task.get('task_tag')):
+                                            self.info(f"Do project <cyan>{task['task_name']}</cyan> sucessfully")
+                                        else: 
+                                            self.warning(f"Failed to do project <cyan>{task['task_name']}</cyan>")
+                                    await asyncio.sleep(random.randint(2,10))
 
                     claim = await self.claim(session)
                     if claim.get('code') == 200:
