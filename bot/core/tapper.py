@@ -377,6 +377,15 @@ class Tapper:
         except Exception as error:
             logger.error(f"{self.session_name} | (Task) Error while join tg channel: {error}")
 
+    @error_handler
+    async def play(self, session, multiplier = 1 ):
+        url = f"https://api.tabibot.com/api/spin/v1/play"
+        data = {"multiplier":multiplier}
+        async with session.post(url=url,json = data,ssl= False) as response:
+            json_res = await response.json()
+            if json_res.get("code") == 200:
+                return json_res.get("data")
+            
     def log(self, msg):
         now = datetime.now().isoformat(" ").split(".")[0]
         print(f"[{now}] {msg}")
@@ -410,7 +419,12 @@ class Tapper:
                         user_id = user_info["tg_user_id"]
                         balance = user_info["coins"]
                         level = user_info["level"]
-                        self.info(f"Account ID: <cyan>{user_id}</cyan> - Balance: <cyan>{balance:,}</cyan> - Level: <cyan>{level}</cyan>")
+                        energy = user_info["energy"].get("energy",0)
+
+                        self.info(f"Account ID: <cyan>{user_id}</cyan> - " 
+                                f"Balance: <cyan>{balance:,}</cyan> - "
+                                f"Level: <cyan>{level}</cyan> - "
+                                f"Energy: <cyan>{energy}</cyan>")
 
                     tasks = await self.task_list(session)
                     full_tasks = [task for task_list in tasks for task in task_list["task_list"]]
@@ -418,7 +432,7 @@ class Tapper:
                     for task in full_tasks:
                         if task.get("user_task_status") == 2:
                             if task.get('task_tag') in ['boot_join_tabi_channel','task_list_join_our_tg_group']:
-                                await self.join_and_mute_tg_channel(task.get('link_url'))
+                                # await self.join_and_mute_tg_channel(task.get('link_url'))
                                 continue
                             elif task.get('task_tag') in ['task_list_watch_ads','task_list_post_story','task_list_invite_3_friends']:
                                 continue
@@ -436,9 +450,11 @@ class Tapper:
                             for task in list_project:
                                 if task["user_task_status"] == 2:
                                     if task["task_tag"] == 'mine_wizzwoods_join_bot':
-                                        await self.do_task(proxy=proxy)
+                                        # await self.do_task(proxy=proxy)
+                                        pass
                                     elif "join_channel" in task["task_tag"]:
-                                        await self.join_and_mute_tg_channel(task["link_url"])
+                                        # await self.join_and_mute_tg_channel(task["link_url"])
+                                        pass
                                     if await self.do_project(session = session, task_tag = task["task_tag"]):
                                         if await self.do_boot(session=session,task_tag = task.get('task_tag')):
                                             self.info(f"Do project <cyan>{task['task_name']}</cyan> sucessfully")
@@ -464,6 +480,19 @@ class Tapper:
                     check_in = await self.check_in(session)
                     if check_in["data"]["check_in_status"] == 1:
                         self.info("Checked in already")
+
+                    #play
+                    if settings.AUTO_PLAY and energy > 0: 
+                        multiplier = settings.MULTIPLIER
+                        for _ in range(min(settings.MAX_PLAYS,energy)):
+                            play_res = await self.play(session=session,multiplier=multiplier)
+                            if play_res:
+                                amount = play_res.get("prize").get("amount")
+                                prize_type = play_res.get("prize").get("prize_type")
+                                self.info(f"Spin successfully, got <cyan>{amount} {prize_type}</cyan>")
+                            else:
+                                self.warning("Failed to spin")
+                            await asyncio.sleep(random.randint(2,10))
 
                     # Get end time
                     mining_info = await self.mining_info(session)
