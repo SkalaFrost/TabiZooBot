@@ -1,9 +1,8 @@
 ⚠️ **Warning: Using this tool may result in your account being banned. Please consider carefully before using!** ⚠️
-
+[![Static Badge](https://img.shields.io/badge/Telegram-Channel-Link?style=for-the-badge&logo=Telegram&logoColor=white&logoSize=auto&color=blue)](https://t.me/airdropfactorycn)       [![Static Badge](https://img.shields.io/badge/Telegram-Bot%20Link-Link?style=for-the-badge&logo=Telegram&logoColor=white&logoSize=auto&color=blue)](https://t.me/tabizoobot/tabizoo?startapp=5833041671)
 
 #### Support our community by clicking on the referral link below. Your contribution helps us continue improving and developing our bot. Thank you!
 [Click here](https://t.me/tabizoobot/tabizoo?startapp=5833041671)
-
 ## Recommendation before use
 
 # 🔥🔥 PYTHON version must be 3.10 🔥🔥
@@ -15,10 +14,10 @@
 |                   Multithreading                   |     :white_check_mark:     |
 |              Proxy binding to session              |     :white_check_mark:     |
 | Auto-register your account with your referral link |     :white_check_mark:     |
-|             Auto claim, upgrade           |     :white_check_mark:     |
+|             Auto claim, upgrade, auto spin          |     :white_check_mark:     |
 |           Support for pyrogram .session            |     :white_check_mark:     |
 
-
+## [Settings](https://github.com/SkalaFrost/TabiZooBot/blob/master/.env-example) (I recommend keeping the remaining configurations unchanged.)
 |        Settings         |                                 Description                                  |
 |:-----------------------:|:----------------------------------------------------------------------------:|
 |  **API_ID / API_HASH**  |   Platform data from which to run the Telegram session (default - android)   |
@@ -98,12 +97,4 @@ You can also use arguments for quick start, for example:
 
 # 1 - Run clicker
 # 2 - Creates a session
-```
-
-
-
-
-### Contacts
-
-For support or questions, contact me on Telegram: 
-[![Static Badge](https://img.shields.io/badge/telegram-bot_author-link?style=for-the-badge&logo=telegram&logoColor=white&logoSize=auto&color=blue)](https://t.me/airdropfactoryv)
+```ư

@@ -196,8 +196,8 @@ class Tapper:
 
     @error_handler
     async def do_task(self, proxy: str | None) -> str:
-        if self.proxy:
-            proxy = Proxy.from_str(self.proxy)
+        if proxy:
+            proxy = Proxy.from_str(proxy)
             proxy_dict = dict(
                 scheme=proxy.protocol,
                 hostname=proxy.host,
@@ -337,6 +337,15 @@ class Tapper:
         data = {"task_tag":task_tag}
         async with session.post(url=url,json = data,ssl= False) as response:
             return response.status == 200
+    
+    @error_handler
+    async def verify_project(self, session,project_tag):
+        url = f"https://api.tabibot.com/api/task/v1/verify/project"
+        data = {"project_tag":project_tag}
+        async with session.post(url=url,json = data,ssl= False) as response:
+            json_res = await response.json()
+            if json_res.get("code") == 200:
+                return json_res.get("data")
         
     @error_handler
     async def join_and_mute_tg_channel(self, link: str):
@@ -356,7 +365,7 @@ class Tapper:
                 if error.ID == 'USER_NOT_PARTICIPANT':
                     await asyncio.sleep(delay=3)
                     response = await self.tg_client.join_chat(link)
-                    logger.info(f"{self.session_name} | Joined to channel: <y>{response.username}</y>")
+                    logger.info(f"<light-yellow>{self.session_name}</light-yellow> | Joined to channel: <y>{response.username}</y>")
                     
                     try:
                         peer = await self.tg_client.resolve_peer(chat_id)
@@ -364,13 +373,13 @@ class Tapper:
                             peer=InputNotifyPeer(peer=peer),
                             settings=InputPeerNotifySettings(mute_until=2147483647)
                         ))
-                        logger.info(f"{self.session_name} | Successfully muted chat <y>{chat_username}</y>")
+                        logger.info(f"<light-yellow>{self.session_name}</light-yellow> | Successfully muted chat <y>{chat_username}</y>")
                     except Exception as e:
-                        logger.info(f"{self.session_name} | (Task) Failed to mute chat <y>{chat_username}</y>: {str(e)}")
+                        logger.info(f"<light-yellow>{self.session_name}</light-yellow> | (Task) Failed to mute chat <y>{chat_username}</y>: {str(e)}")
                     
                     
                 else:
-                    logger.error(f"{self.session_name} | (Task) Error while checking TG group: <y>{chat_username}</y>")
+                    logger.error(f"<light-yellow>{self.session_name}</light-yellow> | (Task) Error while checking TG group: <y>{chat_username}</y>")
 
             if self.tg_client.is_connected:
                 await self.tg_client.disconnect()
@@ -432,9 +441,12 @@ class Tapper:
                     for task in full_tasks:
                         if task.get("user_task_status") == 2:
                             if task.get('task_tag') in ['boot_join_tabi_channel','task_list_join_our_tg_group']:
-                                # await self.join_and_mute_tg_channel(task.get('link_url'))
+                                await self.join_and_mute_tg_channel(task.get('link_url'))
                                 continue
-                            elif task.get('task_tag') in ['task_list_watch_ads','task_list_post_story','task_list_invite_3_friends']:
+                            elif task.get('task_tag') in ['task_list_watch_ads'
+                                                          ,'task_list_post_story'
+                                                          ,'task_list_invite_3_friends'
+                                                          ,'task_daily_check_in']:
                                 continue
 
                             if await self.do_boot(session=session,task_tag = task.get('task_tag')):
@@ -445,22 +457,23 @@ class Tapper:
 
                     mine_projects = await self.mine_project(session)
                     for project in mine_projects:
-                        list_project = await self.get_mine_project(session = session, project_tag = project["project_tag"])
-                        if list_project:
-                            for task in list_project:
-                                if task["user_task_status"] == 2:
-                                    if task["task_tag"] == 'mine_wizzwoods_join_bot':
-                                        # await self.do_task(proxy=proxy)
-                                        pass
-                                    elif "join_channel" in task["task_tag"]:
-                                        # await self.join_and_mute_tg_channel(task["link_url"])
-                                        pass
-                                    if await self.do_project(session = session, task_tag = task["task_tag"]):
-                                        if await self.do_boot(session=session,task_tag = task.get('task_tag')):
-                                            self.info(f"Do project <cyan>{task['task_name']}</cyan> sucessfully")
-                                        else: 
-                                            self.warning(f"Failed to do project <cyan>{task['task_name']}</cyan>")
-                                    await asyncio.sleep(random.randint(2,10))
+                        if project.get("user_project_status") == 2:
+                            list_project = await self.get_mine_project(session = session, project_tag = project["project_tag"])
+                            if list_project:
+                                for task in list_project:
+                                    if task["user_task_status"] == 2:
+                                        if task["task_tag"] == 'mine_wizzwoods_join_bot':
+                                            await self.do_task(proxy=proxy)
+                                        elif "join_channel" in task["task_tag"]:
+                                            await self.join_and_mute_tg_channel(task["link_url"])
+
+                                        if await self.do_project(session = session, task_tag = task["task_tag"]):
+                                            if await self.do_boot(session=session,task_tag = task.get('task_tag')):
+                                                self.info(f"Do project <cyan>{task['task_name']}</cyan> sucessfully")
+                                            else: 
+                                                self.warning(f"Failed to do project <cyan>{task['task_name']}</cyan>")
+                                        await asyncio.sleep(random.randint(2,10))
+                                await self.verify_project(session=session,project_tag = project["project_tag"])
 
                     claim = await self.claim(session)
                     if claim.get('code') == 200:
